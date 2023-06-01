@@ -4,7 +4,8 @@ import axios from 'axios';
 const reconify = (appKey, apiKey, format, action, debug = false) => {
 
     let _debug = (debug != null && debug == true) ? true : false;
-    let _tracker = 'http://localhost:5050/track';
+    //let _tracker = 'http://localhost:5050/track';
+    let _tracker = 'https://track.reconify.com/track';
 
     let payload = {
         reconify :{
