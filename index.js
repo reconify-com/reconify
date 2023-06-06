@@ -3,7 +3,7 @@ import axios from 'axios';
 const RECONIFY_MODULE_VERSION = require('./package.json').version;
 const RECONIFY_TRACKER = 'https://track.reconify.com/track';
 
-
+// currently not used
 const reconifyApi = (config={}) => {    
 
     let _appKey = config.appKey ? config.appKey : null;
@@ -126,6 +126,9 @@ const reconifyOpenAIHandler = (openAiApi, config={}) => {
     }
 
     const logInteraction = async (input, output, timestampIn, timestampOut, type) => {
+        if (_debug == true) {
+            console.log('logInteraction');
+        }
         //base payload
         let payload = {
             reconify :{
@@ -147,29 +150,26 @@ const reconifyOpenAIHandler = (openAiApi, config={}) => {
         transmit(payload);
     }
 
+    //override method
     const reconifyCreateChatCompletion = async (createChatCompletionRequest, options) => {
-        //console.log('in reconifyCreateChatCompletion');
-        //console.log('input:', JSON.stringify(createChatCompletionRequest));
+
         let tsIn = Date.now();
-        //console.log('ts in :', tsIn);
         let response = await openAiApi.originalCreateChatCompletion(createChatCompletionRequest, options);
         let tsOut = Date.now();
-        //console.log('ts out :', tsOut);
-        //console.log('duration:', (tsOut - tsIn));
-        //console.log('output:', JSON.stringify(response.data));
-        
-        //log message - async, don't wait
+
+        //async logging
         logInteraction(createChatCompletionRequest, response, tsIn, tsOut, 'chat');
 
         return response;
     }
 
+    //override method
     const reconifyCreateCompletion = async (createCompletionRequest, options) => {
         let tsIn = Date.now();
         let response = await openAiApi.originalCreateCompletion(createCompletionRequest, options);
         let tsOut = Date.now();
     
-        //log message - async, don't wait
+        //async logging
         logInteraction(createCompletionRequest, response, tsIn, tsOut, 'completion');
 
         return response;
@@ -185,6 +185,5 @@ const reconifyOpenAIHandler = (openAiApi, config={}) => {
     return {setUser, setSession}
 
 }
-//export default reconifyApi;
 
-export {reconifyApi, reconifyOpenAIHandler};
+export {reconifyOpenAIHandler};
