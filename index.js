@@ -1,9 +1,9 @@
 
 import axios from 'axios';
-const RECONIFY_MODULE_VERSION = '1.0.0';
+const RECONIFY_MODULE_VERSION = require('./package.json').version;
 const RECONIFY_TRACKER = 'https://track.reconify.com/track';
 
-//const reconify = (appKey, apiKey, format, action, debug = false) => {
+
 const reconifyApi = (config={}) => {    
 
     let _appKey = config.appKey ? config.appKey : null;
@@ -11,8 +11,6 @@ const reconifyApi = (config={}) => {
     if(_apiKey == null || _apiKey == '' || _appKey == null || _appKey == ''){
         throw new Error('An appKey and apiKey are required');
     }
-
-    let _provider = config.provider ? config.provider : null;
 
     let _debug = config.debug ? (config.debug == true ? true : false): false;
     let _tracker = config.tracker ? config.tracker : RECONIFY_TRACKER;
