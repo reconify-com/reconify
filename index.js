@@ -1,6 +1,6 @@
 
 import axios from 'axios';
-const RECONIFY_MODULE_VERSION = require('./package.json').version;
+const RECONIFY_MODULE_VERSION = '1.0.0';
 const RECONIFY_TRACKER = 'https://track.reconify.com/track';
 
 // currently not used
@@ -123,6 +123,7 @@ const reconifyOpenAIHandler = (openAiApi, config={}) => {
                 console.log('transmit error', err);
             }
         });
+        return;
     }
 
     const logInteraction = async (input, output, timestampIn, timestampOut, type) => {
@@ -148,6 +149,7 @@ const reconifyOpenAIHandler = (openAiApi, config={}) => {
             },
         }
         transmit(payload);
+        return;
     }
 
     //override method
