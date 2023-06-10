@@ -90,6 +90,7 @@ const reconifyOpenAIHandler = (openAiApi, config={}) => {
     //optional meta data
     let _user = {};
     let _session = null; 
+    let _sessionTimeout = null;
 
     const setUser = (user = {}) => {
         //if(user != null){
@@ -100,6 +101,11 @@ const reconifyOpenAIHandler = (openAiApi, config={}) => {
         //if(session != null){
             _session = session;
         //}
+    }
+    const setSessionTimeout = (sessionTimeout) => {
+        if(!isNaN(sessionTimeout)){
+            _sessionTimeout = sessionTimeout;
+        }
     }
 
     const transmit = async (payload) => {
@@ -143,6 +149,7 @@ const reconifyOpenAIHandler = (openAiApi, config={}) => {
             response: (output.data ? output.data : null),
             user: _user,
             session: _session,
+            sessionTimeout: _sessionTimeout,
             timestamps: {
                 request: timestampIn,
                 response: timestampOut
@@ -184,7 +191,7 @@ const reconifyOpenAIHandler = (openAiApi, config={}) => {
     openAiApi.originalCreateCompletion = openAiApi.createCompletion; 
     openAiApi.createCompletion = reconifyCreateCompletion;
 
-    return {setUser, setSession}
+    return {setUser, setSession, setSessionTimeout}
 
 }
 
