@@ -74,6 +74,12 @@ The Session ID is an alphanumeric string.
 reconify.setSession('MySessionId');
 ```
 
+#### Set a Session Timeout
+Set the session timeout in minutes to override the default
+```javascript
+reconify.setSessionTimeout(15);
+```
+
 ## Examples
 
 ### Chat Example
