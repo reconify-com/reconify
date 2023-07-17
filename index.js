@@ -1,7 +1,8 @@
-
 import axios from 'axios';
-const RECONIFY_MODULE_VERSION = '1.0.0';
+import { v4 as uuidv4 } from 'uuid';
+const RECONIFY_MODULE_VERSION = '1.0.2';
 const RECONIFY_TRACKER = 'https://track.reconify.com/track';
+const RECONIFY_UPLOADER = 'https://track.reconify.com/upload';
 
 // currently not used
 const reconifyApi = (config={}) => {    
@@ -14,6 +15,7 @@ const reconifyApi = (config={}) => {
 
     let _debug = config.debug ? (config.debug == true ? true : false): false;
     let _tracker = config.tracker ? config.tracker : RECONIFY_TRACKER;
+    let _uploader = config.uploader ? config.uploader : RECONIFY_UPLOADER;
 
     let payload = {
         reconify :{
@@ -86,6 +88,8 @@ const reconifyOpenAIHandler = (openAiApi, config={}) => {
     //optional config overrides
     let _debug = config.debug ? (config.debug == true ? true : false): false;
     let _tracker = config.tracker ? config.tracker : RECONIFY_TRACKER;
+    let _uploader = config.uploader ? config.uploader : RECONIFY_UPLOADER;
+    let _trackImages = config.hasOwnProperty('trackImages') ? config.trackImages : true;
 
     //optional meta data
     let _user = {};
@@ -132,6 +136,30 @@ const reconifyOpenAIHandler = (openAiApi, config={}) => {
         return;
     }
 
+    const uploadImage = async (payload) => {
+        if (_debug == true) {
+            console.log("uploading image: ", JSON.stringify(payload))
+        }
+        await axios.post(_uploader, payload)
+        .then((res) => {
+            if (res.data.status == 'ok') {
+                if (_debug == true) {
+                    console.log('upload success');
+                }
+            } else {
+                if (_debug == true) {
+                    console.log('upload failure');
+                }
+            }
+        })
+        .catch((err) => {
+            if (_debug == true) {
+                console.log('upload error', err);
+            }
+        });
+        return;
+    }
+
     const logInteraction = async (input, output, timestampIn, timestampOut, type) => {
         if (_debug == true) {
             console.log('logInteraction');
@@ -156,6 +184,45 @@ const reconifyOpenAIHandler = (openAiApi, config={}) => {
             },
         }
         transmit(payload);
+        return;
+    }
+
+    const logInteractionWithImageData = async (input, output, timestampIn, timestampOut, type) => {
+        if (_debug == true) {
+            console.log('logInteractionWithImageData');
+        }
+
+        let copy = {...output.data};
+        let n = copy.data.length;
+        //console.log(`num images: ${n}`)
+        let filenames = [];
+        let randomId = uuidv4()
+        for (let i=0; i< n; i++){
+            filenames.push(`${randomId}-${copy.created}-${i}.png`);
+        }
+
+        copy.data = filenames;
+        //log interaction without image data
+        logInteraction(input, {data:copy}, timestampIn, timestampOut, type);
+
+        //send each image
+        for (let i=0; i< n; i++){
+            uploadImage({
+                reconify :{
+                    format: 'openai',
+                    appKey: _appKey,
+                    apiKey: _apiKey,
+                    type: 'image-upload',
+                    version: RECONIFY_MODULE_VERSION,
+                },
+                upload: {
+                    filename: filenames[i],
+                    type: 'response-image',
+                    data: output.data.data[i],
+                    format: 'b64_json'
+                }
+            })
+        }
         return;
     }
 
@@ -184,12 +251,34 @@ const reconifyOpenAIHandler = (openAiApi, config={}) => {
         return response;
     }
 
+    const reconifyCreateImage = async (createImageRequest, options) => {
+        let tsIn = Date.now();
+        let response = await openAiApi.originalCreateImage(createImageRequest, options);
+        let tsOut = Date.now();
+    
+        if(_trackImages) {
+            if(createImageRequest.response_format == null || createImageRequest.response_format == 'url'){
+                logInteraction(createImageRequest, response, tsIn, tsOut, 'image');
+            }
+            else {
+                //send images separately 
+                console.log('response_format:', createImageRequest.response_format);
+                logInteractionWithImageData(createImageRequest, response, tsIn, tsOut, 'image');
+            }
+        }
+       
+        return response;
+    }
+
     //set handler for chat 
     openAiApi.originalCreateChatCompletion = openAiApi.createChatCompletion; 
     openAiApi.createChatCompletion = reconifyCreateChatCompletion;
     //set handler for completion 
     openAiApi.originalCreateCompletion = openAiApi.createCompletion; 
     openAiApi.createCompletion = reconifyCreateCompletion;
+    //set handler for image creation 
+    openAiApi.originalCreateImage = openAiApi.createImage; 
+    openAiApi.createImage = reconifyCreateImage;
 
     return {setUser, setSession, setSessionTimeout}
 
