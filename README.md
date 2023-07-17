@@ -45,7 +45,22 @@ const reconify = reconifyOpenAIHandler(openai, {
 
 This is all that is needed for a basic integration. The module takes care of sending the correct data to Reconify. 
 
-There are additional optional parameters as well:
+#### Optional Config Parameters 
+There are additional optional parameters that can be passed in to the handler. 
+
++ debug: (default false) Enable console logging
++ trackImages: (default true) Turn off tracking of createImage 
+
+For example:
+
+```javascript
+const reconify = reconifyOpenAIHandler(openai, {
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+   debug: true
+});
+```
+
 
 ### Optional methods
 
@@ -146,5 +161,38 @@ const completion = await openai.createCompletion({
    prompt: "write a haiku about cats",
    max_tokens: 100,
    temperature: 0,
+});
+```
+
+### Image Example
+
+```javascript
+import { Configuration, OpenAIApi } from "openai";
+import { reconifyOpenAIHandler } from 'reconify';
+‍
+const configuration = new Configuration({
+   apiKey: process.env.OPENAI_API_KEY,
+});
+‍
+const openai = new OpenAIApi(configuration);
+‍
+const reconify = reconifyOpenAIHandler(openai, {
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+});
+‍
+reconify.setUser({
+   userId: "12345",
+   isAuthenticated: 1,
+   firstName: "Jim",
+   lastName: "Stand",
+   gender: "male"
+});
+‍
+const result = await openai.createImage({
+   prompt: "a cat on the moon",
+   n: 1,
+   size: "256x256",
+   response_format: "b64_json"
 });
 ```
