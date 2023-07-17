@@ -48,8 +48,8 @@ This is all that is needed for a basic integration. The module takes care of sen
 #### Optional Config Parameters 
 There are additional optional parameters that can be passed in to the handler. 
 
-+ debug: (default false) Enable console logging
-+ trackImages: (default true) Turn off tracking of createImage 
++ debug: (default false) Enable/Disable console logging
++ trackImages: (default true) Turn on/off tracking of createImage 
 
 For example:
 
