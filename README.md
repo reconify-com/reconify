@@ -2,7 +2,8 @@
 
 The Reconify module is used for sending data to the Reconify platform at [www.reconify.com](https://www.reconify.com). 
 
-Currently the module supports processing and analyzing Chats and Completions from OpenAI. 
+Currently the module supports processing and analyzing Chats, Completions, and Images from OpenAI and the following foundational models using Amazon Bedrock: AI21 Jurassic, Anthropic Claude, Cohere Command, and Stability Stable Diffusion.
+
 Support for additional actions and providers will be added.
 
 ## Get started
@@ -18,7 +19,7 @@ which will be used in the code below to send data to Reconify.
 npm install reconify --save
 ```
 
-## Integrate the module in code
+## Integrate the module with OpenAI
 
 ### Import the module
 ```javascript
@@ -95,7 +96,90 @@ Set the session timeout in minutes to override the default
 reconify.setSessionTimeout(15);
 ```
 
-## Examples
+## Integrate the module with Amazon Bedrock Runtime
+
+### Import the module
+```javascript
+import {reconifyBedrockRuntimeHandler} from 'reconify';
+import {BedrockRuntimeClient, InvokeModelCommand} from "@aws-sdk/client-bedrock-runtime";
+```
+
+### Create instances of Bedrock and the Reconify Middleware
+Create an instance of the BedrockRuntimeClient.
+
+```javascript
+const client = new BedrockRuntimeClient({
+   region: "us-west-2"
+});
+```
+
+Create the instance of Reconify with the Reconify API_KEY and APP_KEY created above.
+
+```javascript
+const reconify = reconifyBedrockRuntimeHandler({
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+});
+```
+
+### Add Reconify as a Bedrock Runtime Middleware
+```javascript
+client.middlewareStack.use(reconify.plugin());
+```
+
+This is all that is needed for a basic integration. The module takes care of sending the correct data to Reconify. 
+
+#### Optional Config Parameters 
+There are additional optional parameters that can be passed in to the handler. 
+
++ debug: (default false) Enable/Disable console logging
++ trackImages: (default true) Turn on/off tracking of images 
+
+For example:
+
+```javascript
+const reconify = reconifyBedrockRuntimeHandler({
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+   debug: true
+});
+```
+
+
+### Optional methods
+
+You can optionally pass in a user object or session ID to be used in the analytics reporting. 
+The session ID will be used to group interactions together in the same session transcript.
+
+#### Set a user
+The user JSON should include a unique userId, all the other fields are optional. 
+Without a unique userId, each user will be treated as a new user.
+
+```javascript
+reconify.setUser ({
+   "userId": "ABC123",
+   "isAuthenticated": 1,
+   "firstName": "Francis",
+   "lastName": "Smith",
+   "email": "",
+   "phone": "",
+   "gender": "female"
+});
+```
+
+#### Set a Session ID
+The Session ID is an alphanumeric string.
+```javascript
+reconify.setSession('MySessionId');
+```
+
+#### Set a Session Timeout
+Set the session timeout in minutes to override the default
+```javascript
+reconify.setSessionTimeout(15);
+```
+
+## Examples with OpenAI
 
 ### Chat Example
 
@@ -195,4 +279,80 @@ const result = await openai.createImage({
    size: "256x256",
    response_format: "b64_json"
 });
+```
+
+## Examples with Bedrock Runtime
+
+### Anthropic Claude Example
+
+```javascript
+import {BedrockRuntimeClient, InvokeModelCommand} from "@aws-sdk/client-bedrock-runtime";
+import {reconifyBedrockRuntimeHandler} from 'reconify';
+
+const client = new BedrockRuntimeClient({
+   region: "us-west-2",
+   credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY,
+      secretAccessKey: process.env.AWS_SECRET_KEY
+   } 
+})
+‍
+const reconify = reconifyBedrockRuntimeHandler({
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+});
+
+client.middlewareStack.use(reconify.plugin());
+‍
+reconify.setUser({
+   userId: "12345",
+   firstName: "Jane",
+   lastName: "Smith"
+});
+‍
+const command = new InvokeModelCommand({
+   modelId: "anthropic.claude-instant-v1",
+   contentType: "application/json",
+   accept: "application/json",
+   body: "{\"prompt\":\"\\n\\nHuman: Tell a cat joke.\\n\\nAssistant:\",\"max_tokens_to_sample\":300,\"temperature\":1,\"top_k\":250,\"top_p\":0.999,\"stop_sequences\":[\"\\n\\nHuman:\"],\"anthropic_version\":\"bedrock-2023-05-31\"}"
+});
+
+const results = await client.send(command)
+```
+
+### Stable Diffusion Image Example
+
+```javascript
+import {BedrockRuntimeClient, InvokeModelCommand} from "@aws-sdk/client-bedrock-runtime";
+import {reconifyBedrockRuntimeHandler} from 'reconify';
+
+const client = new BedrockRuntimeClient({
+   region: "us-west-2",
+   credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY,
+      secretAccessKey: process.env.AWS_SECRET_KEY
+   } 
+})
+‍
+const reconify = reconifyBedrockRuntimeHandler({
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+});
+
+client.middlewareStack.use(reconify.plugin());
+‍
+reconify.setUser({
+   userId: "12345",
+   firstName: "Jane",
+   lastName: "Smith"
+});
+‍
+const command = new InvokeModelCommand({
+   modelId: "stability.stable-diffusion-xl-v0",
+   contentType: "application/json",
+   accept: "application/json",
+   body: "{\"text_prompts\":[{\"text\":\"a cat drinking boba tea\"}],\"cfg_scale\":10,\"seed\":0,\"steps\":50}"
+});
+
+const results = await client.send(command)
 ```
