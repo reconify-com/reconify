@@ -21,6 +21,8 @@ npm install reconify --save
 
 ## Integrate the module with OpenAI
 
+The following instructions are for OpenAI's Node NPM v4 or later (released in Nov 2023). For earlier versions of OpenAI's NPM, follow the [legacy instructions](https://www.reconify.com/docs/openai/legacy)
+
 ### Import the module
 ```javascript
 import {reconifyOpenAIHandler} from 'reconify';
@@ -30,9 +32,9 @@ import {reconifyOpenAIHandler} from 'reconify';
 Prior to initializing the Reconify module, create an instance of OpenAI which will be passed to the module.
 
 ```javascript
-const openai = new OpenAIApi(new Configuration({
+const openai = new OpenAI({
    apiKey: process.env.OPENAI_API_KEY,
-}));
+});
 ```
 
 Create the instance of Reconify passing the OpenAi instance along with the Reconify API_KEY and APP_KEY created above.
@@ -184,14 +186,12 @@ reconify.setSessionTimeout(15);
 ### Chat Example
 
 ```javascript
-import { Configuration, OpenAIApi } from "openai";
+import { OpenAI } from "openai";
 import { reconifyOpenAIHandler } from 'reconify';
 ‍
-const configuration = new Configuration({
+const openai = new OpenAI({
    apiKey: process.env.OPENAI_API_KEY,
 });
-‍
-const openai = new OpenAIApi(configuration);
 ‍
 const reconify = reconifyOpenAIHandler(openai, {
    appKey: process.env.RECONIFY_APP_KEY, 
@@ -206,7 +206,7 @@ reconify.setUser({
    gender: "male"
 });
 ‍
-const completion = await openai.createChatCompletion({
+const completion = await openai.chat.completions.create({
    model: "gpt-3.5-turbo",
    messages: [
    {role: "system", content: "you are an expert on commedians"},
@@ -218,14 +218,12 @@ const completion = await openai.createChatCompletion({
 ### Completion Example
 
 ```javascript
-import { Configuration, OpenAIApi } from "openai";
+import { OpenAI } from "openai";
 import { reconifyOpenAIHandler } from 'reconify';
 ‍
-const configuration = new Configuration({
+const openai = new OpenAI({
    apiKey: process.env.OPENAI_API_KEY,
 });
-‍
-const openai = new OpenAIApi(configuration);
 ‍
 const reconify = reconifyOpenAIHandler(openai, {
    appKey: process.env.RECONIFY_APP_KEY, 
@@ -240,7 +238,7 @@ reconify.setUser({
    gender: "male"
 });
 ‍
-const completion = await openai.createCompletion({
+const completion = await openai.completions.create({
    model: "text-davinci-003",
    prompt: "write a haiku about cats",
    max_tokens: 100,
@@ -251,14 +249,12 @@ const completion = await openai.createCompletion({
 ### Image Example
 
 ```javascript
-import { Configuration, OpenAIApi } from "openai";
+import { OpenAI } from "openai";
 import { reconifyOpenAIHandler } from 'reconify';
 ‍
-const configuration = new Configuration({
+const openai = new OpenAI({
    apiKey: process.env.OPENAI_API_KEY,
 });
-‍
-const openai = new OpenAIApi(configuration);
 ‍
 const reconify = reconifyOpenAIHandler(openai, {
    appKey: process.env.RECONIFY_APP_KEY, 
@@ -273,11 +269,12 @@ reconify.setUser({
    gender: "male"
 });
 ‍
-const result = await openai.createImage({
+const result = await openai.images.generate({
+   model: "dall-e-3"
    prompt: "a cat on the moon",
    n: 1,
-   size: "256x256",
-   response_format: "b64_json"
+   size: "1024x1024",
+   response_format: "url"
 });
 ```
 
