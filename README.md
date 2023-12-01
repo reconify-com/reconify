@@ -536,7 +536,7 @@ const anthropic = new Anthropic({
    apiKey: process.env.ANTHROPIC_API_KEY,
 });
 ‍
-const reconify = reconifyOpenAIHandler(anthropic, {
+const reconify = reconifyAnthropicHandler(anthropic, {
    appKey: process.env.RECONIFY_APP_KEY, 
    apiKey: process.env.RECONIFY_API_KEY,
 });
