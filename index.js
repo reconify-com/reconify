@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
-const RECONIFY_MODULE_VERSION = '2.0.0';
+const RECONIFY_MODULE_VERSION = '2.1.0';
 const RECONIFY_TRACKER = 'https://track.reconify.com/track';
 const RECONIFY_UPLOADER = 'https://track.reconify.com/upload';
 
@@ -678,4 +678,238 @@ const reconifyBedrockRuntimeHandler = (config={}) => {
     return {plugin, setUser, setSession, setSessionTimeout}
 
 }
-export {reconifyOpenAILegacyV3Handler, reconifyOpenAIHandler, reconifyBedrockRuntimeHandler};
+//cohere
+const reconifyCohereHandler = (cohere, config={}) => {
+    const _format = "cohere";
+    const _appKey = config.appKey ? config.appKey : null;
+    const _apiKey = config.apiKey ? config.apiKey : null;
+    if(_apiKey == null || _apiKey == '' || _appKey == null || _appKey == ''){
+        throw new Error('An appKey and apiKey are required');
+    }
+    if(cohere == null) {
+        throw new Error('The cohere instance is required');
+    }
+    //optional config overrides
+    let _debug = config.debug ? (config.debug == true ? true : false): false;
+    let _tracker = config.tracker ? config.tracker : RECONIFY_TRACKER;
+    let _uploader = config.uploader ? config.uploader : RECONIFY_UPLOADER;
+    let _trackImages = config.hasOwnProperty('trackImages') ? config.trackImages : true;
+
+    //optional meta data
+    let _user = {};
+    let _session = null; 
+    let _sessionTimeout = null;
+
+    const setUser = (user = {}) => {
+        //if(user != null){
+            _user = user;
+        //}
+    }
+    const setSession = (session) => {
+        //if(session != null){
+            _session = session;
+        //}
+    }
+    const setSessionTimeout = (sessionTimeout) => {
+        if(!isNaN(sessionTimeout)){
+            _sessionTimeout = sessionTimeout;
+        }
+    }
+
+    const transmit = async (payload) => {
+        if (_debug == true) {
+            console.log("transmitting payload: ", JSON.stringify(payload))
+        }
+        await axios.post(_tracker, payload)
+        .then((res) => {
+            if (res.data.status == 'ok') {
+                if (_debug == true) {
+                    console.log('transmit success');
+                }
+            } else {
+                if (_debug == true) {
+                    console.log('transmit failure');
+                }
+            }
+        })
+        .catch((err) => {
+            if (_debug == true) {
+                console.log('transmit error', err);
+            }
+        });
+        return;
+    }
+
+    const logInteraction = async (input, output, timestampIn, timestampOut, type) => {
+        if (_debug == true) {
+            console.log('logInteraction');
+        }
+        //base payload
+        let payload = {
+            reconify :{
+                format: _format,
+                appKey: _appKey,
+                apiKey: _apiKey,
+                type: type,
+                version: RECONIFY_MODULE_VERSION,
+            },
+            request: input,
+            response: output,
+            user: _user,
+            session: _session,
+            sessionTimeout: _sessionTimeout,
+            timestamps: {
+                request: timestampIn,
+                response: timestampOut
+            },
+        }
+        transmit(payload);
+        return;
+    }
+
+    //override method
+    const reconifyChat = async (req, options) => {
+
+        let tsIn = Date.now();
+        let response = await cohere.originalChat(req, options);
+        let tsOut = Date.now();
+
+        //async logging
+        logInteraction(req, response, tsIn, tsOut, 'chat');
+
+        return response;
+    }
+
+    //override method
+    const reconifyGenerate = async (req, options) => {
+        let tsIn = Date.now();
+        let response = await cohere.originalGenerate(req, options);
+        let tsOut = Date.now();
+    
+        //async logging
+        logInteraction(req, response, tsIn, tsOut, 'generate');
+
+        return response;
+    }
+
+    //set handler for chat 
+    cohere.originalChat = cohere.chat; 
+    cohere.chat = reconifyChat;
+    //set handler for generations
+    cohere.originalGenerate = cohere.generate; 
+    cohere.generate = reconifyGenerate;
+
+    return {setUser, setSession, setSessionTimeout}
+
+}
+
+//anthropic
+const reconifyAnthropicHandler = (anthropic, config={}) => {
+    const _format = "anthropic";
+    const _appKey = config.appKey ? config.appKey : null;
+    const _apiKey = config.apiKey ? config.apiKey : null;
+    if(_apiKey == null || _apiKey == '' || _appKey == null || _appKey == ''){
+        throw new Error('An appKey and apiKey are required');
+    }
+    if(anthropic == null) {
+        throw new Error('The anthropic instance is required');
+    }
+    //optional config overrides
+    let _debug = config.debug ? (config.debug == true ? true : false): false;
+    let _tracker = config.tracker ? config.tracker : RECONIFY_TRACKER;
+    let _uploader = config.uploader ? config.uploader : RECONIFY_UPLOADER;
+    let _trackImages = config.hasOwnProperty('trackImages') ? config.trackImages : true;
+
+    //optional meta data
+    let _user = {};
+    let _session = null; 
+    let _sessionTimeout = null;
+
+    const setUser = (user = {}) => {
+        //if(user != null){
+            _user = user;
+        //}
+    }
+    const setSession = (session) => {
+        //if(session != null){
+            _session = session;
+        //}
+    }
+    const setSessionTimeout = (sessionTimeout) => {
+        if(!isNaN(sessionTimeout)){
+            _sessionTimeout = sessionTimeout;
+        }
+    }
+
+    const transmit = async (payload) => {
+        if (_debug == true) {
+            console.log("transmitting payload: ", JSON.stringify(payload))
+        }
+        await axios.post(_tracker, payload)
+        .then((res) => {
+            if (res.data.status == 'ok') {
+                if (_debug == true) {
+                    console.log('transmit success');
+                }
+            } else {
+                if (_debug == true) {
+                    console.log('transmit failure');
+                }
+            }
+        })
+        .catch((err) => {
+            if (_debug == true) {
+                console.log('transmit error', err);
+            }
+        });
+        return;
+    }
+
+    const logInteraction = async (input, output, timestampIn, timestampOut, type) => {
+        if (_debug == true) {
+            console.log('logInteraction');
+        }
+        //base payload
+        let payload = {
+            reconify :{
+                format: _format,
+                appKey: _appKey,
+                apiKey: _apiKey,
+                type: type,
+                version: RECONIFY_MODULE_VERSION,
+            },
+            request: input,
+            response: output,
+            user: _user,
+            session: _session,
+            sessionTimeout: _sessionTimeout,
+            timestamps: {
+                request: timestampIn,
+                response: timestampOut
+            },
+        }
+        transmit(payload);
+        return;
+    }
+
+    //override method
+    const reconifyCompletion = async (req, options) => {
+        let tsIn = Date.now();
+        let response = await anthropic.completions.originalCreateCompletion(req, options);
+        let tsOut = Date.now();
+    
+        //async logging
+        logInteraction(req, response, tsIn, tsOut, 'chat');
+
+        return response;
+    }
+
+    //set handler for completions 
+    anthropic.completions.originalCreateCompletion = anthropic.completions.create; 
+    anthropic.completions.create = reconifyCompletion;
+
+    return {setUser, setSession, setSessionTimeout}
+
+}
+export {reconifyOpenAILegacyV3Handler, reconifyOpenAIHandler, reconifyBedrockRuntimeHandler, 
+    reconifyCohereHandler, reconifyAnthropicHandler};

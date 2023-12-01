@@ -2,7 +2,11 @@
 
 The Reconify module is used for sending data to the Reconify platform at [www.reconify.com](https://www.reconify.com). 
 
-Currently the module supports processing and analyzing Chats, Completions, and Images from OpenAI and the following foundational models using Amazon Bedrock: AI21 Jurassic, Anthropic Claude, Cohere Command, and Stability Stable Diffusion.
+Currently the module supports processing and analyzing Chats, Completions, and Images from:
++ **[OpenAI](#integrate-the-module-with-openai)** 
++ **[Amazon Bedrock](#integrate-the-module-with-amazon-bedrock-runtime)**  (AI21 Jurassic, Anthropic Claude, Cohere Command, and Stability Stable Diffusion)
++ **[Anthropic](#integrate-the-module-with-anthropic)**
++ **[Cohere](#integrate-the-module-with-cohere)**
 
 Support for additional actions and providers will be added.
 
@@ -98,6 +102,8 @@ Set the session timeout in minutes to override the default
 reconify.setSessionTimeout(15);
 ```
 
+See [Examples with OpenAI](#examples-with-openai)
+
 ## Integrate the module with Amazon Bedrock Runtime
 
 ### Import the module
@@ -180,6 +186,170 @@ Set the session timeout in minutes to override the default
 ```javascript
 reconify.setSessionTimeout(15);
 ```
+
+See [Examples with Amazon Bedrock Runtime](#examples-with-bedrock-runtime)
+
+## Integrate the module with Anthropic
+
+The following instructions are for Anthropic's Node NPM. 
+
+### Import the module
+```javascript
+import {reconifyAnthropicHandler} from 'reconify';
+```
+
+### Create an instance
+Prior to initializing the Reconify module, create an instance of Anthropic which will be passed to the module.
+
+```javascript
+const anthropic = new Anthropic({
+   apiKey: process.env.ANTHROPIC_API_KEY,
+});
+```
+
+Create the instance of Reconify passing the Anthropic instance along with the Reconify API_KEY and APP_KEY created above.
+
+```javascript
+const reconify = reconifyAnthropicHandler(anthropic, {
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+});
+```
+
+This is all that is needed for a basic integration. The module takes care of sending the correct data to Reconify. 
+
+#### Optional Config Parameters 
+There are additional optional parameters that can be passed in to the handler. 
+
++ debug: (default false) Enable/Disable console logging
++ trackImages: (default true) Turn on/off tracking of createImage 
+
+For example:
+
+```javascript
+const reconify = reconifyAnthropicHandler(openai, {
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+   debug: true
+});
+```
+
+
+### Optional methods
+
+You can optionally pass in a user object or session ID to be used in the analytics reporting. 
+The session ID will be used to group interactions together in the same session transcript.
+
+#### Set a user
+The user JSON should include a unique userId, all the other fields are optional. 
+Without a unique userId, each user will be treated as a new user.
+
+```javascript
+reconify.setUser ({
+   "userId": "ABC123",
+   "isAuthenticated": 1,
+   "firstName": "Francis",
+   "lastName": "Smith",
+   "email": "",
+   "phone": "",
+   "gender": "female"
+});
+```
+
+#### Set a Session ID
+The Session ID is an alphanumeric string.
+```javascript
+reconify.setSession('MySessionId');
+```
+
+#### Set a Session Timeout
+Set the session timeout in minutes to override the default
+```javascript
+reconify.setSessionTimeout(15);
+```
+
+See [Examples with Anthropic](#examples-with-anthropic)
+
+## Integrate the module with Cohere
+
+The following instructions are for Cohere's Node NPM. 
+
+### Import the module
+```javascript
+import {reconifyCohereHandler} from 'reconify';
+```
+
+### Create an instance
+Prior to initializing the Reconify module, create an instance of Cohere which will be passed to the module.
+
+```javascript
+const cohere = new CohereClient({
+   token: process.env.COHERE_API_KEY,
+});
+```
+
+Create the instance of Reconify passing the Cohere instance along with the Reconify API_KEY and APP_KEY created above.
+
+```javascript
+const reconify = reconifyCohereHandler(cohere, {
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+});
+```
+
+This is all that is needed for a basic integration. The module takes care of sending the correct data to Reconify. 
+
+#### Optional Config Parameters 
+There are additional optional parameters that can be passed in to the handler. 
+
++ debug: (default false) Enable/Disable console logging
++ trackImages: (default true) Turn on/off tracking of createImage 
+
+For example:
+
+```javascript
+const reconify = reconifyCohereHandler(openai, {
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+   debug: true
+});
+```
+
+
+### Optional methods
+
+You can optionally pass in a user object or session ID to be used in the analytics reporting. 
+The session ID will be used to group interactions together in the same session transcript.
+
+#### Set a user
+The user JSON should include a unique userId, all the other fields are optional. 
+Without a unique userId, each user will be treated as a new user.
+
+```javascript
+reconify.setUser ({
+   "userId": "ABC123",
+   "isAuthenticated": 1,
+   "firstName": "Francis",
+   "lastName": "Smith",
+   "email": "",
+   "phone": "",
+   "gender": "female"
+});
+```
+
+#### Set a Session ID
+The Session ID is an alphanumeric string.
+```javascript
+reconify.setSession('MySessionId');
+```
+
+#### Set a Session Timeout
+Set the session timeout in minutes to override the default
+```javascript
+reconify.setSessionTimeout(15);
+```
+
+See [Examples with Cohere](#examples-with-cohere)
 
 ## Examples with OpenAI
 
@@ -352,4 +522,92 @@ const command = new InvokeModelCommand({
 });
 
 const results = await client.send(command)
+```
+
+## Examples with Anthropic
+
+### Completions Example
+
+```javascript
+import Anthropic from '@anthropic-ai/sdk';
+import { reconifyAnthropicHandler } from 'reconify';
+‍
+const anthropic = new Anthropic({
+   apiKey: process.env.ANTHROPIC_API_KEY,
+});
+‍
+const reconify = reconifyOpenAIHandler(anthropic, {
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+});
+‍
+reconify.setUser({
+   userId: "12345",
+   firstName: "Jane",
+   lastName: "Smith"
+});
+‍
+const completion = await anthropic.completions.create({
+   model: "claude-2",
+   max_tokens_to_sample: 300,
+   prompt: `${Anthropic.HUMAN_PROMPT} Tell me a cat joke${Anthropic.AI_PROMPT}`
+});
+```
+
+
+## Examples with Cohere
+
+### Chat Example
+
+```javascript
+import { CohereClient } from "cohere-ai";
+import { reconifyCohereHandler } from 'reconify';
+‍
+const cohere = new CohereClient({
+   token: process.env.COHERE_API_KEY,
+});
+‍
+const reconify = reconifyCohereHandler(cohere, {
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+});
+‍
+reconify.setUser({
+   userId: "12345",
+   firstName: "Jane",
+   lastName: "Smith"
+});
+‍
+const completion = await cohere.chat({
+   model: "command",
+   message: "Tell me a cat joke"
+});
+```
+
+### Generate Example
+
+```javascript
+import { CohereClient } from "cohere-ai";
+import { reconifyCohereHandler } from 'reconify';
+‍
+const cohere = new CohereClient({
+   token: process.env.COHERE_API_KEY,
+});
+‍
+const reconify = reconifyCohereHandler(cohere, {
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+});
+‍
+reconify.setUser({
+   userId: "12345",
+   firstName: "Jane",
+   lastName: "Smith"
+});
+‍
+const completion = await cohere.generate({
+   model: "command",
+   message: "Write a cat haiku",
+   max_tokens: 300
+});
 ```
