@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
-const RECONIFY_MODULE_VERSION = '2.1.0';
+const RECONIFY_MODULE_VERSION = '2.2.0';
 const RECONIFY_TRACKER = 'https://track.reconify.com/track';
 const RECONIFY_UPLOADER = 'https://track.reconify.com/upload';
 
@@ -610,8 +610,10 @@ const reconifyBedrockRuntimeHandler = (config={}) => {
         }
         let requestId = output.requestId;
         let body = output.body; 
-        let data = body.artifacts;
-
+        let data = body?.artifacts;
+        if(input?.modelId?.startsWith('amazon.')){
+            data = body.images.map( (x) => { return { base64: x, seed:null, finishReason:null } })
+        }
         let n = data.length;
 
         let images = [];
@@ -662,9 +664,10 @@ const reconifyBedrockRuntimeHandler = (config={}) => {
                         let requestId = (result?.output["$metadata"] != null) ? result.output["$metadata"].requestId : null;
                         let input = args?.input 
                         let model = input?.modelId ? input.modelId : '';
-                        if(model.startsWith('anthropic.') || model.startsWith('ai21.') || model.startsWith('cohere.')){
+                        if(model.startsWith('anthropic.') || model.startsWith('ai21.') || model.startsWith('cohere.')
+                            || model.startsWith('meta.') || model.startsWith('amazon.titan-text')){
                             logInteraction(input, {body: body, requestId: requestId}, tsIn, tsOut, 'chat')
-                        } else if (model.startsWith('stability.')) {
+                        } else if (model.startsWith('stability.') || model.startsWith('amazon.titan-image')) {
                             logInteractionWithImageData(input, {body: body, requestId: requestId}, tsIn, tsOut, 'image')
                         }
                         return result

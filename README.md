@@ -4,7 +4,7 @@ The Reconify module is used for sending data to the Reconify platform at [www.re
 
 Currently the module supports processing and analyzing Chats, Completions, and Images from:
 + **[OpenAI](#integrate-the-module-with-openai)** 
-+ **[Amazon Bedrock](#integrate-the-module-with-amazon-bedrock-runtime)**  (AI21 Jurassic, Anthropic Claude, Cohere Command, and Stability Stable Diffusion)
++ **[Amazon Bedrock](#integrate-the-module-with-amazon-bedrock-runtime)**  (Amazon Titan, AI21 Jurassic, Anthropic Claude, Cohere Command, Meta Llama 2, and Stability Stable Diffusion)
 + **[Anthropic](#integrate-the-module-with-anthropic)**
 + **[Cohere](#integrate-the-module-with-cohere)**
 
