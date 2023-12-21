@@ -705,7 +705,7 @@ import { reconifyGeminiHandler } from 'reconify';
 ‍
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 ‍
-const reconify = reconifyCohereHandler(genAI, {
+const reconify = reconifyGeminiHandler(genAI, {
    appKey: process.env.RECONIFY_APP_KEY, 
    apiKey: process.env.RECONIFY_API_KEY,
 });
@@ -731,7 +731,7 @@ import * as fs from 'fs';
 ‍
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 ‍
-const reconify = reconifyCohereHandler(genAI, {
+const reconify = reconifyGeminiHandler(genAI, {
    appKey: process.env.RECONIFY_APP_KEY, 
    apiKey: process.env.RECONIFY_API_KEY,
 });
@@ -766,7 +766,7 @@ import { reconifyGeminiHandler } from 'reconify';
 ‍
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 ‍
-const reconify = reconifyCohereHandler(genAI, {
+const reconify = reconifyGeminiHandler(genAI, {
    appKey: process.env.RECONIFY_APP_KEY, 
    apiKey: process.env.RECONIFY_API_KEY,
 });
