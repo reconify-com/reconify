@@ -914,5 +914,259 @@ const reconifyAnthropicHandler = (anthropic, config={}) => {
     return {setUser, setSession, setSessionTimeout}
 
 }
+//google gemini
+const reconifyGeminiHandler = (gemini, config={}) => {
+    const _format = "gemini";
+    const _appKey = config.appKey ? config.appKey : null;
+    const _apiKey = config.apiKey ? config.apiKey : null;
+    if(_apiKey == null || _apiKey == '' || _appKey == null || _appKey == ''){
+        throw new Error('An appKey and apiKey are required');
+    }
+    if(gemini == null) {
+        throw new Error('The Google Gemini instance is required');
+    }
+    //optional config overrides
+    let _debug = config.debug ? (config.debug == true ? true : false): false;
+    let _tracker = config.tracker ? config.tracker : RECONIFY_TRACKER;
+    let _uploader = config.uploader ? config.uploader : RECONIFY_UPLOADER;
+    let _trackImages = config.hasOwnProperty('trackImages') ? config.trackImages : true;
+
+    //optional meta data
+    let _user = {};
+    let _session = null; 
+    let _sessionTimeout = null;
+
+    const setUser = (user = {}) => {
+        //if(user != null){
+            _user = user;
+        //}
+    }
+    const setSession = (session) => {
+        //if(session != null){
+            _session = session;
+        //}
+    }
+    const setSessionTimeout = (sessionTimeout) => {
+        if(!isNaN(sessionTimeout)){
+            _sessionTimeout = sessionTimeout;
+        }
+    }
+
+    const transmit = async (payload) => {
+        if (_debug == true) {
+            console.log("transmitting payload: ", JSON.stringify(payload))
+        }
+        await axios.post(_tracker, payload)
+        .then((res) => {
+            if (res.data.status == 'ok') {
+                if (_debug == true) {
+                    console.log('transmit success');
+                }
+            } else {
+                if (_debug == true) {
+                    console.log('transmit failure');
+                }
+            }
+        })
+        .catch((err) => {
+            if (_debug == true) {
+                console.log('transmit error', err);
+            }
+        });
+        return;
+    }
+
+    const uploadImage = async (payload) => {
+        if (_debug == true) {
+            console.log("uploading image: ", JSON.stringify(payload))
+        }
+        await axios.post(_uploader, payload)
+        .then((res) => {
+            if (res.data.status == 'ok') {
+                if (_debug == true) {
+                    console.log('upload success');
+                }
+            } else {
+                if (_debug == true) {
+                    console.log('upload failure');
+                }
+            }
+        })
+        .catch((err) => {
+            if (_debug == true) {
+                console.log('upload error', err);
+            }
+        });
+        return;
+    }
+
+    const logInteraction = async (input, output, timestampIn, timestampOut, type) => {
+        if (_debug == true) {
+            console.log('logInteraction');
+        }
+        //base payload
+        let payload = {
+            reconify :{
+                format: _format,
+                appKey: _appKey,
+                apiKey: _apiKey,
+                type: type,
+                version: RECONIFY_MODULE_VERSION,
+            },
+            request: input,
+            ...output,
+            user: _user,
+            session: _session,
+            sessionTimeout: _sessionTimeout,
+            timestamps: {
+                request: timestampIn,
+                response: timestampOut
+            },
+        }
+        transmit(payload);
+        return;
+    }
+
+    const logInteractionWithImageData = async (input, output, timestampIn, timestampOut, type) => {
+        if (_debug == true) {
+            console.log('logInteractionWithImageData');
+        }
+
+        let copy = {...input};
+        let n = copy.contents.length;
+        //console.log(`num images: ${n}`)
+        let filenames = [];
+        let prompt = "";
+        let randomId = uuidv4()
+        let data = [];
+        for (let i=0; i< n; i++){
+            if(copy.contents[i].hasOwnProperty("inlineData")) {
+                let mime = copy.contents[i].inlineData?.mimeType; 
+                let ext = 'png'
+                switch (mime) {
+                    case 'image/png':
+                        ext = 'png'
+                        break;
+                    case 'image/jpeg':
+                        ext = 'jpg'
+                        break;
+                    case 'image/jpg':
+                        ext = 'jpg'
+                        break;
+                    case 'image/webp':
+                        ext = 'webp'
+                        break;
+                    case 'image/heic':
+                        ext = 'heic'
+                        break;
+                    case 'image/heif':
+                        ext = 'heif'
+                        break;
+                    default:
+                        ext = 'png'
+                        break;
+                }
+                //if(mime == 'image/jpeg' || mime == 'image/jpg') {ext = 'jpg'}
+                //filenames.push(`${randomId}-${timestampIn}-${i}.${ext}`);
+                filenames.push({filename:`${randomId}-${timestampIn}-${i}.${ext}`});
+                data.push(copy.contents[i].inlineData?.data)
+            } else {
+                prompt = copy.contents[i]
+            }
+        }
+        //copy.input = {prompt: prompt, images: filenames}
+        copy.contents = [{parts:[{text:prompt}, ...filenames]}]
+
+        //log interaction without image data
+        logInteraction(copy, output, timestampIn, timestampOut, type);
+
+        //send each image (image for in vs response-image for out)
+        for (let i=0; i< data.length; i++){
+            uploadImage({
+                reconify :{
+                    format: _format,
+                    appKey: _appKey,
+                    apiKey: _apiKey,
+                    type: 'image-upload',
+                    version: RECONIFY_MODULE_VERSION,
+                },
+                upload: {
+                    filename: filenames[i].filename,
+                    type: 'image',
+                    data: {b64_json: data[i]},
+                    format: 'b64_json'
+                }
+            })
+        }
+        return;
+    }
+
+    //override get model
+    const reconifyGetGenerativeModel = (modelParams) => {
+        let geminiModel = null;
+        try {
+            geminiModel = gemini.originalGetGenerativeModel(modelParams)
+        } catch(err) {
+            throw err
+        }
+
+        //override generate content method
+        const reconifyGenerateContent = async (options) => {
+
+            let tsIn = Date.now();
+            let response = await geminiModel.originalGenerateContent(options);
+            let tsOut = Date.now();
+
+            //async logging
+            if(modelParams?.model.startsWith('gemini-pro-vision')){
+                logInteractionWithImageData({contents:[...options], ...modelParams}, response, tsIn, tsOut, 'image');
+            } else {
+                logInteraction({contents:[{parts:[{text:options}]}], ...modelParams}, response, tsIn, tsOut, 'generate');
+            }
+
+            return response;
+        }
+
+        //set handler for generate content 
+        geminiModel.originalGenerateContent = geminiModel.generateContent; 
+        geminiModel.generateContent = reconifyGenerateContent;
+
+        //override chat
+        const reconifyStartChat = (chatParams) => {
+            let geminiChat = null;
+            try {
+                geminiChat = geminiModel.originaStartChat(chatParams)
+            } catch(err) {
+                throw err
+            }
+
+            const reconifySendMessage = async (input) => {
+                let tsIn = Date.now();
+                let response = await geminiChat.originalSendMessage(input);
+                let tsOut = Date.now();
+    
+                //async logging
+                //logInteraction({input: input, config: modelParams, chatConfig: chatParams }, response, tsIn, tsOut, 'chat');
+                logInteraction({contents:[{role: "user", parts:[{text:input}]}], model: modelParams?.model, ...chatParams }, response, tsIn, tsOut, 'chat');
+                return response;
+            }
+            geminiChat.originalSendMessage = geminiChat.sendMessage; 
+            geminiChat.sendMessage = reconifySendMessage;
+
+            return geminiChat
+        }
+        geminiModel.originaStartChat = geminiModel.startChat; 
+        geminiModel.startChat = reconifyStartChat;
+
+        return geminiModel
+    } 
+
+    //set handler for get model
+    gemini.originalGetGenerativeModel = gemini.getGenerativeModel; 
+    gemini.getGenerativeModel = reconifyGetGenerativeModel;
+
+    return {setUser, setSession, setSessionTimeout}
+
+}
 export {reconifyOpenAILegacyV3Handler, reconifyOpenAIHandler, reconifyBedrockRuntimeHandler, 
-    reconifyCohereHandler, reconifyAnthropicHandler};
+    reconifyCohereHandler, reconifyAnthropicHandler, reconifyGeminiHandler};
