@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
-const RECONIFY_MODULE_VERSION = '2.3.0';
+const RECONIFY_MODULE_VERSION = '2.4.0';
 const RECONIFY_TRACKER = 'https://track.reconify.com/track';
 const RECONIFY_UPLOADER = 'https://track.reconify.com/upload';
 
@@ -1168,5 +1168,120 @@ const reconifyGeminiHandler = (gemini, config={}) => {
     return {setUser, setSession, setSessionTimeout}
 
 }
+
+//Mistral
+const reconifyMistralHandler = (mistral, config={}) => {
+    const _format = "mistral";
+    const _appKey = config.appKey ? config.appKey : null;
+    const _apiKey = config.apiKey ? config.apiKey : null;
+    if(_apiKey == null || _apiKey == '' || _appKey == null || _appKey == ''){
+        throw new Error('An appKey and apiKey are required');
+    }
+    if(mistral == null) {
+        throw new Error('The mistral instance is required');
+    }
+    //optional config overrides
+    let _debug = config.debug ? (config.debug == true ? true : false): false;
+    let _tracker = config.tracker ? config.tracker : RECONIFY_TRACKER;
+    let _uploader = config.uploader ? config.uploader : RECONIFY_UPLOADER;
+    let _trackImages = config.hasOwnProperty('trackImages') ? config.trackImages : true;
+
+    //optional meta data
+    let _user = {};
+    let _session = null; 
+    let _sessionTimeout = null;
+
+    const setUser = (user = {}) => {
+        //if(user != null){
+            _user = user;
+        //}
+    }
+    const setSession = (session) => {
+        //if(session != null){
+            _session = session;
+        //}
+    }
+    const setSessionTimeout = (sessionTimeout) => {
+        if(!isNaN(sessionTimeout)){
+            _sessionTimeout = sessionTimeout;
+        }
+    }
+
+    const transmit = async (payload) => {
+        if (_debug == true) {
+            console.log("transmitting payload: ", JSON.stringify(payload))
+        }
+        await axios.post(_tracker, payload)
+        .then((res) => {
+            if (res.data.status == 'ok') {
+                if (_debug == true) {
+                    console.log('transmit success');
+                }
+            } else {
+                if (_debug == true) {
+                    console.log('transmit failure');
+                }
+            }
+        })
+        .catch((err) => {
+            if (_debug == true) {
+                console.log('transmit error', err);
+            }
+        });
+        return;
+    }
+
+
+    const logInteraction = async (input, output, timestampIn, timestampOut, type) => {
+        if (_debug == true) {
+            console.log('logInteraction');
+        }
+        //base payload
+        let payload = {
+            reconify :{
+                format: _format,
+                appKey: _appKey,
+                apiKey: _apiKey,
+                type: type,
+                version: RECONIFY_MODULE_VERSION,
+            },
+            request: input,
+            response: output,
+            user: _user,
+            session: _session,
+            sessionTimeout: _sessionTimeout,
+            timestamps: {
+                request: timestampIn,
+                response: timestampOut
+            },
+        }
+        transmit(payload);
+        return;
+    }
+
+    //override method
+    const reconifyChat = async (options) => {
+
+        let tsIn = Date.now();
+        let response = await mistral.originalChat(options);
+        let tsOut = Date.now();
+
+        //async logging
+        logInteraction(options, response, tsIn, tsOut, 'chat');
+
+        return response;
+    }
+
+
+    //set handler for chat 
+    mistral.originalChat = mistral.chat; 
+    mistral.chat = reconifyChat; 
+
+    return {setUser, setSession, setSessionTimeout}
+
+}
+
+
 export {reconifyOpenAILegacyV3Handler, reconifyOpenAIHandler, reconifyBedrockRuntimeHandler, 
-    reconifyCohereHandler, reconifyAnthropicHandler, reconifyGeminiHandler};
+    reconifyCohereHandler, reconifyAnthropicHandler, reconifyGeminiHandler,
+    reconifyMistralHandler};

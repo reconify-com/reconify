@@ -8,6 +8,7 @@ Currently the module supports processing and analyzing Chats, Completions, and I
 + **[Anthropic](#integrate-the-module-with-anthropic)**
 + **[Cohere](#integrate-the-module-with-cohere)**
 + **[Google Gemini](#integrate-the-module-with-google-gemini)**
++ **[Mistral](#integrate-the-module-with-mistral)**
 
 Support for additional actions and providers will be added.
 
@@ -373,7 +374,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 Create the instance of Reconify passing the Gemini instance along with the Reconify API_KEY and APP_KEY created above.
 
 ```javascript
-const reconify = reconifyCohereHandler(genAI, {
+const reconify = reconifyGeminiHandler(genAI, {
    appKey: process.env.RECONIFY_APP_KEY, 
    apiKey: process.env.RECONIFY_API_KEY,
 });
@@ -390,7 +391,7 @@ There are additional optional parameters that can be passed in to the handler.
 For example:
 
 ```javascript
-const reconify = reconifyCohereHandler(genAI, {
+const reconify = reconifyGeminiHandler(genAI, {
    appKey: process.env.RECONIFY_APP_KEY, 
    apiKey: process.env.RECONIFY_API_KEY,
    debug: true
@@ -432,6 +433,87 @@ reconify.setSessionTimeout(15);
 ```
 
 See [Examples with Google Gemini](#examples-with-google-gemini)
+
+## Integrate the module with Mistral
+
+The following instructions are for Mistral's Node NPM. 
+
+### Import the module
+```javascript
+import {reconifyMistralHandler} from 'reconify';
+```
+
+### Create an instance
+Prior to initializing the Reconify module, create an instance of the Mistral Client which will be passed to the module.
+
+```javascript
+import { MistralClient } from '@mistralai/mistralai';
+
+const client = new MistralClient(process.env.MISTRAL_API_KEY);
+```
+
+Create the instance of Reconify passing the Mistral instance along with the Reconify API_KEY and APP_KEY created above.
+
+```javascript
+const reconify = reconifyMistralHandler(client, {
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+});
+```
+
+This is all that is needed for a basic integration. The module takes care of sending the correct data to Reconify. 
+
+#### Optional Config Parameters 
+There are additional optional parameters that can be passed in to the handler. 
+
++ debug: (default false) Enable/Disable console logging
++ trackImages: (default true) Turn on/off tracking of createImage 
+
+For example:
+
+```javascript
+const reconify = reconifyMistralHandler(genAI, {
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+   debug: true
+});
+```
+
+
+### Optional methods
+
+You can optionally pass in a user object or session ID to be used in the analytics reporting. 
+The session ID will be used to group interactions together in the same session transcript.
+
+#### Set a user
+The user JSON should include a unique userId, all the other fields are optional. 
+Without a unique userId, each user will be treated as a new user.
+
+```javascript
+reconify.setUser ({
+   "userId": "ABC123",
+   "isAuthenticated": 1,
+   "firstName": "Francis",
+   "lastName": "Smith",
+   "email": "",
+   "phone": "",
+   "gender": "female"
+});
+```
+
+#### Set a Session ID
+The Session ID is an alphanumeric string.
+```javascript
+reconify.setSession('MySessionId');
+```
+
+#### Set a Session Timeout
+Set the session timeout in minutes to override the default
+```javascript
+reconify.setSessionTimeout(15);
+```
+
+See [Examples with Mistral](#examples-with-mistral)
 
 ## Examples with OpenAI
 
@@ -792,4 +874,34 @@ const chat = model.startChat({
 const result = await chat.sendMessage("How many colors are my cats?")
 const response = await result.response;
 const text = response.text();
+```
+
+## Examples with Mistral
+
+### Chat Example
+
+```javascript
+import { MistralClient } from '@mistralai/mistralai';
+import { reconifyMistralHandler } from 'reconify';
+‍
+const client = new MistralClient(process.env.MISTRAL_API_KEY);
+‍
+const reconify = reconifyMistralHandler(client, {
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+});
+‍
+reconify.setUser({
+   userId: "12345",
+   firstName: "Jane",
+   lastName: "Smith"
+});
+‍
+const response = await client.chat({
+   model: 'mistral-tiny',
+   messages: [
+      { role: 'user', content: 'Tell me a cat joke.'}
+   ]
+});
+
 ```
