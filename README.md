@@ -9,6 +9,7 @@ Currently the module supports processing and analyzing Chats, Completions, and I
 + **[Cohere](#integrate-the-module-with-cohere)**
 + **[Google Gemini](#integrate-the-module-with-google-gemini)**
 + **[Mistral](#integrate-the-module-with-mistral)**
++ **[Perplexity](#integrate-the-module-with-perplexity)**
 
 Support for additional actions and providers will be added.
 
@@ -515,6 +516,103 @@ reconify.setSessionTimeout(15);
 
 See [Examples with Mistral](#examples-with-mistral)
 
+## Integrate the module with Perplexity
+
+The following instructions are for Perplexity with the API NPM. 
+
+### Import the module
+```javascript
+import {reconifyUniversalHandler} from 'reconify';
+```
+
+### Create an instance
+Prior to initializing the Reconify module, create an instance of the API SDK for Perplexity.
+
+```javascript
+import { api } from 'api';
+
+const sdk = api('@pplx/v0#b2wdhb1klq5dn1d6') 
+sdk.auth(process.env.PERPLEXITY_API_KEY);
+```
+
+Create the instance of Reconify passing the Reconify API_KEY and APP_KEY created above.
+
+```javascript
+const reconify = reconifyUniversalHandler({
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+});
+```
+
+After making a call to the Perplexity SDK API, send the input parameters and response data to Reconify, along with the start and end time stamps.
+
+```javascript
+const start = reconify.getTimestamp();
+const input = {
+   model: 'pplx-7b-chat',
+   messages: [
+      { role: "system", content: "You are a comic"},
+      { role: 'user', content: 'Tell me a cat joke.'}
+   ]
+}
+const response = await sdk.post_chat_completions(input);
+const end = reconify.getTimestamp();
+
+reconify.logChat(input, response.data, start, end);
+```
+
+#### Optional Config Parameters 
+There are additional optional parameters that can be passed in to the handler. 
+
++ debug: (default false) Enable/Disable console logging
++ trackImages: (default true) Turn on/off tracking of createImage 
+
+For example:
+
+```javascript
+const reconify = reconifyUniversalHandler(genAI, {
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+   debug: true
+});
+```
+
+### Optional methods
+
+You can optionally pass in a user object or session ID to be used in the analytics reporting. 
+The session ID will be used to group interactions together in the same session transcript.
+
+#### Set a user
+The user JSON should include a unique userId, all the other fields are optional. 
+Without a unique userId, each user will be treated as a new user.
+
+```javascript
+reconify.setUser ({
+   "userId": "ABC123",
+   "isAuthenticated": 1,
+   "firstName": "Francis",
+   "lastName": "Smith",
+   "email": "",
+   "phone": "",
+   "gender": "female"
+});
+```
+
+#### Set a Session ID
+The Session ID is an alphanumeric string.
+```javascript
+reconify.setSession('MySessionId');
+```
+
+#### Set a Session Timeout
+Set the session timeout in minutes to override the default
+```javascript
+reconify.setSessionTimeout(15);
+```
+
+See [Examples with Perplexity](#examples-with-perplexity)
+
+
 ## Examples with OpenAI
 
 ### Chat Example
@@ -543,7 +641,7 @@ reconify.setUser({
 const completion = await openai.chat.completions.create({
    model: "gpt-3.5-turbo",
    messages: [
-   {role: "system", content: "you are an expert on commedians"},
+   {role: "system", content: "you are an expert on comedians"},
    {role: "user", content: "tell a joke about cats like Jerry Seinfeld"}
    ],
 });
@@ -904,4 +1002,40 @@ const response = await client.chat({
    ]
 });
 
+```
+
+## Examples with Perplexity
+
+### Chat Example
+
+```javascript
+import { api } from 'api';
+import { reconifyUniversalHandler } from 'reconify';
+
+const sdk = api('@pplx/v0#b2wdhb1klq5dn1d6')
+sdk.auth(process.env.PERPLEXITY_API_KEY);
+‍
+const reconify = reconifyUniversalHandler({
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+});
+‍
+reconify.setUser({
+   userId: "12345",
+   firstName: "Jane",
+   lastName: "Smith"
+});
+‍
+const start = reconify.getTimestamp();
+const input = {
+   model: 'pplx-7b-chat',
+   messages: [
+      { role: "system", content: "You are a comic"},
+      { role: 'user', content: 'Tell me a cat joke.'}
+   ]
+}
+const response = await sdk.post_chat_completions(input);
+const end = reconify.getTimestamp();
+
+reconify.logChat(input, response.data, start, end);
 ```

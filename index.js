@@ -1,12 +1,12 @@
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
-const RECONIFY_MODULE_VERSION = '2.4.1';
+const RECONIFY_MODULE_VERSION = '2.4.2';
 const RECONIFY_TRACKER = 'https://track.reconify.com/track';
 const RECONIFY_UPLOADER = 'https://track.reconify.com/upload';
 
 // currently not used
 const reconifyApi = (config={}) => {    
-
+    const _format = 'openai';
     let _appKey = config.appKey ? config.appKey : null;
     let _apiKey = config.apiKey ? config.apiKey : null;
     if(_apiKey == null || _apiKey == '' || _appKey == null || _appKey == ''){
@@ -50,7 +50,7 @@ const reconifyApi = (config={}) => {
 
     const logOpenAIChat = (input, output, meta={}) => {
 
-        payload.reconify.format = 'openai';
+        payload.reconify.format = _format;
         payload.reconify.type = 'chat';
         payload.request = input;
         payload.response = output.data ? output.data : null;
@@ -62,7 +62,7 @@ const reconifyApi = (config={}) => {
     }
     const logOpenAICompletion = (input, output, meta={}) => {
 
-        payload.reconify.format = 'openai';
+        payload.reconify.format = _format;
         payload.reconify.type = 'completion';
         payload.request = input;
         payload.response = output.data ? output.data : null;
@@ -77,6 +77,7 @@ const reconifyApi = (config={}) => {
 }
 
 const reconifyOpenAILegacyV3Handler = (openAiApi, config={}) => {
+    const _format = 'openai';
     const _appKey = config.appKey ? config.appKey : null;
     const _apiKey = config.apiKey ? config.apiKey : null;
     if(_apiKey == null || _apiKey == '' || _appKey == null || _appKey == ''){
@@ -167,7 +168,7 @@ const reconifyOpenAILegacyV3Handler = (openAiApi, config={}) => {
         //base payload
         let payload = {
             reconify :{
-                format: 'openai',
+                format: _format,
                 appKey: _appKey,
                 apiKey: _apiKey,
                 type: type,
@@ -209,7 +210,7 @@ const reconifyOpenAILegacyV3Handler = (openAiApi, config={}) => {
         for (let i=0; i< n; i++){
             uploadImage({
                 reconify :{
-                    format: 'openai',
+                    format: _format,
                     appKey: _appKey,
                     apiKey: _apiKey,
                     type: 'image-upload',
@@ -286,6 +287,7 @@ const reconifyOpenAILegacyV3Handler = (openAiApi, config={}) => {
 
 //open ai v4
 const reconifyOpenAIHandler = (openAiApi, config={}) => {
+    const _format = 'openai';
     const _appKey = config.appKey ? config.appKey : null;
     const _apiKey = config.apiKey ? config.apiKey : null;
     if(_apiKey == null || _apiKey == '' || _appKey == null || _appKey == ''){
@@ -376,7 +378,7 @@ const reconifyOpenAIHandler = (openAiApi, config={}) => {
         //base payload
         let payload = {
             reconify :{
-                format: 'openai',
+                format: _format,
                 appKey: _appKey,
                 apiKey: _apiKey,
                 type: type,
@@ -418,7 +420,7 @@ const reconifyOpenAIHandler = (openAiApi, config={}) => {
         for (let i=0; i< n; i++){
             uploadImage({
                 reconify :{
-                    format: 'openai',
+                    format: _format,
                     appKey: _appKey,
                     apiKey: _apiKey,
                     type: 'image-upload',
@@ -1281,7 +1283,106 @@ const reconifyMistralHandler = (mistral, config={}) => {
 
 }
 
+//universal
+const reconifyUniversalHandler = (config={}) => {
+    const _format = 'universal';
+    const _appKey = config.appKey ? config.appKey : null;
+    const _apiKey = config.apiKey ? config.apiKey : null;
+    if(_apiKey == null || _apiKey == '' || _appKey == null || _appKey == ''){
+        throw new Error('An appKey and apiKey are required');
+    }
+
+    //optional config overrides
+    let _debug = config.debug ? (config.debug == true ? true : false): false;
+    let _tracker = config.tracker ? config.tracker : RECONIFY_TRACKER;
+    let _uploader = config.uploader ? config.uploader : RECONIFY_UPLOADER;
+    let _trackImages = config.hasOwnProperty('trackImages') ? config.trackImages : true;
+
+    //optional meta data
+    let _user = {};
+    let _session = null; 
+    let _sessionTimeout = null;
+
+    const setUser = (user = {}) => {
+        //if(user != null){
+            _user = user;
+        //}
+    }
+    const setSession = (session) => {
+        //if(session != null){
+            _session = session;
+        //}
+    }
+    const setSessionTimeout = (sessionTimeout) => {
+        if(!isNaN(sessionTimeout)){
+            _sessionTimeout = sessionTimeout;
+        }
+    }
+
+    const getTimestamp = () => {
+        return Date.now();
+    }
+
+    const transmit = async (payload) => {
+        if (_debug == true) {
+            console.log("transmitting payload: ", JSON.stringify(payload))
+        }
+        await axios.post(_tracker, payload)
+        .then((res) => {
+            if (res.data.status == 'ok') {
+                if (_debug == true) {
+                    console.log('transmit success');
+                }
+            } else {
+                if (_debug == true) {
+                    console.log('transmit failure');
+                }
+            }
+        })
+        .catch((err) => {
+            if (_debug == true) {
+                console.log('transmit error', err);
+            }
+        });
+        return;
+    }
+
+    const logInteraction = async (input, output, timestampIn, timestampOut, type) => {
+        if (_debug == true) {
+            console.log('logInteraction');
+        }
+        //base payload
+        let payload = {
+            reconify :{
+                format: _format,
+                appKey: _appKey,
+                apiKey: _apiKey,
+                type: type,
+                version: RECONIFY_MODULE_VERSION,
+            },
+            request: input,
+            response: output,
+            user: _user,
+            session: _session,
+            sessionTimeout: _sessionTimeout,
+            timestamps: {
+                request: timestampIn,
+                response: timestampOut
+            },
+        }
+        transmit(payload);
+        return;
+    }
+
+    const logChat = async (request, response, startTimestamp, endTimestamp) => {
+        logInteraction(request, response, startTimestamp, endTimestamp, 'chat');
+        return
+    }
+
+    return {setUser, setSession, setSessionTimeout, getTimestamp, logChat}
+
+}
 
 export {reconifyOpenAILegacyV3Handler, reconifyOpenAIHandler, reconifyBedrockRuntimeHandler, 
     reconifyCohereHandler, reconifyAnthropicHandler, reconifyGeminiHandler,
-    reconifyMistralHandler};
+    reconifyMistralHandler, reconifyUniversalHandler};
