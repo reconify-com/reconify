@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
-const RECONIFY_MODULE_VERSION = '2.4.2';
+const RECONIFY_MODULE_VERSION = '3.0.0';
 const RECONIFY_TRACKER = 'https://track.reconify.com/track';
 const RECONIFY_UPLOADER = 'https://track.reconify.com/upload';
 
@@ -667,7 +667,7 @@ const reconifyBedrockRuntimeHandler = (config={}) => {
                         let input = args?.input 
                         let model = input?.modelId ? input.modelId : '';
                         if(model.startsWith('anthropic.') || model.startsWith('ai21.') || model.startsWith('cohere.')
-                            || model.startsWith('meta.') || model.startsWith('amazon.titan-text')){
+                            || model.startsWith('meta.') || model.startsWith('mistral.') || model.startsWith('amazon.titan-text')){
                             logInteraction(input, {body: body, requestId: requestId}, tsIn, tsOut, 'chat')
                         } else if (model.startsWith('stability.') || model.startsWith('amazon.titan-image')) {
                             logInteractionWithImageData(input, {body: body, requestId: requestId}, tsIn, tsOut, 'image')
@@ -904,6 +904,17 @@ const reconifyAnthropicHandler = (anthropic, config={}) => {
         let tsOut = Date.now();
     
         //async logging
+        logInteraction(req, response, tsIn, tsOut, 'completion');
+
+        return response;
+    }
+
+    const reconifyChat = async (req, options) => {
+        let tsIn = Date.now();
+        let response = await anthropic.messages.originalCreateChat(req, options);
+        let tsOut = Date.now();
+    
+        //async logging
         logInteraction(req, response, tsIn, tsOut, 'chat');
 
         return response;
@@ -912,6 +923,9 @@ const reconifyAnthropicHandler = (anthropic, config={}) => {
     //set handler for completions 
     anthropic.completions.originalCreateCompletion = anthropic.completions.create; 
     anthropic.completions.create = reconifyCompletion;
+
+    anthropic.messages.originalCreateChat = anthropic.messages.create; 
+    anthropic.messages.create = reconifyChat;
 
     return {setUser, setSession, setSessionTimeout}
 

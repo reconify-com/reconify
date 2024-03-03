@@ -4,7 +4,7 @@ The Reconify module is used for sending data to the Reconify platform at [www.re
 
 Currently the module supports processing and analyzing Chats, Completions, and Images from:
 + **[OpenAI](#integrate-the-module-with-openai)** 
-+ **[Amazon Bedrock](#integrate-the-module-with-amazon-bedrock-runtime)**  (Amazon Titan, AI21 Jurassic, Anthropic Claude, Cohere Command, Meta Llama 2, and Stability Stable Diffusion)
++ **[Amazon Bedrock](#integrate-the-module-with-amazon-bedrock-runtime)**  (Amazon Titan, AI21 Jurassic, Anthropic Claude, Cohere Command, Meta Llama 2, Mistral, and Stability Stable Diffusion)
 + **[Anthropic](#integrate-the-module-with-anthropic)**
 + **[Cohere](#integrate-the-module-with-cohere)**
 + **[Google Gemini](#integrate-the-module-with-google-gemini)**
@@ -787,6 +787,36 @@ const results = await client.send(command)
 ```
 
 ## Examples with Anthropic
+
+### Chat Example
+
+```javascript
+import Anthropic from '@anthropic-ai/sdk';
+import { reconifyAnthropicHandler } from 'reconify';
+‍
+const anthropic = new Anthropic({
+   apiKey: process.env.ANTHROPIC_API_KEY,
+});
+‍
+const reconify = reconifyAnthropicHandler(anthropic, {
+   appKey: process.env.RECONIFY_APP_KEY, 
+   apiKey: process.env.RECONIFY_API_KEY,
+});
+‍
+reconify.setUser({
+   userId: "12345",
+   firstName: "Jane",
+   lastName: "Smith"
+});
+‍
+const chat = await anthropic.messages.create({
+   model: "claude-2.1",
+   max_tokens: 300,
+   messages: [
+      {role: "user", content: "Tell me a cat joke"}
+   ]
+});
+```
 
 ### Completions Example
 
