@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
-const RECONIFY_MODULE_VERSION = '3.0.2';
+const RECONIFY_MODULE_VERSION = '3.1.0';
 const RECONIFY_TRACKER = 'https://track.reconify.com/track';
 const RECONIFY_UPLOADER = 'https://track.reconify.com/upload';
 
@@ -481,17 +481,48 @@ const reconifyOpenAIHandler = (openAiApi, config={}) => {
         return response;
     }
 
-    //set handler for chat 
-    openAiApi.chat.completions.originalCreateChatCompletion = openAiApi.chat.completions.create; 
-    openAiApi.chat.completions.create = reconifyCreateChatCompletion;
-    //set handler for completion - legacy
-    openAiApi.completions.originalCreateCompletion = openAiApi.completions.create; 
-    openAiApi.completions.create = reconifyCreateCompletion;
-    //set handler for image creation 
-    openAiApi.images.originalCreateImage = openAiApi.images.generate; 
-    openAiApi.images.generate = reconifyCreateImage;
+    const logAssistant = async (run, messageIn, messageOut ) => {
 
-    return {setUser, setSession, setSessionTimeout}
+        let tsIn = run?.hasOwnProperty('started_at') ? (run.started_at * 1000): Date.now()
+        let tsOut = run?.hasOwnProperty('completed_at') ? (run.completed_at * 1000): Date.now()
+
+        //assistant id
+        if(messageIn != null && (messageIn?.assistant_id == null || messageIn?.assistant_id == "")){
+            messageIn.assistant_id = run?.assistant_id
+        }
+        //thread id
+        if(messageIn != null && (messageIn?.thread_id == null || messageIn?.thread_id == "")){
+            messageIn.thread_id = run?.thread_id
+        }
+        //model 
+        if(messageIn != null && (messageIn?.model == null || messageIn?.model == "")){
+            messageIn.model = run?.model
+        }
+        //tokens
+        if(messageOut != null && !messageOut.hasOwnProperty('usage')){
+            messageOut.usage = run?.usage
+        }
+        logInteraction(messageIn,messageOut,tsIn, tsOut, 'assistant')
+    }
+
+    //set handler for chat 
+    if(!openAiApi?.chat?.completions.hasOwnProperty('originalCreateChatCompletion')) {
+        openAiApi.chat.completions.originalCreateChatCompletion = openAiApi.chat.completions.create; 
+        openAiApi.chat.completions.create = reconifyCreateChatCompletion;
+    }
+    
+    //set handler for completion - legacy
+    if(!openAiApi?.chat?.completions.hasOwnProperty('originalCreateCompletion')) {
+        openAiApi.completions.originalCreateCompletion = openAiApi.completions.create; 
+        openAiApi.completions.create = reconifyCreateCompletion;
+    }
+    //set handler for image creation 
+    if(!openAiApi?.chat?.completions.hasOwnProperty('originalCreateImage')) {
+        openAiApi.images.originalCreateImage = openAiApi.images.generate; 
+        openAiApi.images.generate = reconifyCreateImage;
+    }
+
+    return {setUser, setSession, setSessionTimeout, logAssistant}
 
 }
 
